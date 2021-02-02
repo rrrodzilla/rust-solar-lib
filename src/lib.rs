@@ -5,6 +5,10 @@ use crate::inventory_items::inventory_types::ArrayComponent;
 #[allow(unused_imports)]
 use crate::inventory_items::inventory_types::ArrayComponentType;
 #[allow(unused_imports)]
+use crate::inventory_items::inventory_types::ArrayConnection;
+#[allow(unused_imports)]
+use crate::inventory_items::inventory_types::BatteryBank;
+#[allow(unused_imports)]
 use crate::inventory_items::inventory_types::Display;
 #[allow(unused_imports)]
 use crate::inventory_items::inventory_types::PanelInventory;
@@ -16,6 +20,9 @@ use crate::inventory_items::inventory_types::Specification;
 use crate::inventory_items::inventory_types::Unit;
 #[allow(unused_imports)]
 use crate::inventory_items::inventory_types::ValueType;
+
+#[allow(unused_imports)]
+use crate::inventory_items::inventory_types::ArrayConnectionType;
 
 pub struct Inventory {}
 
@@ -36,6 +43,16 @@ mod tests {
     }
 
     #[test]
+    fn array_connection_test() {
+        let panel = ArrayComponent::new_solar_panel(290, 32.1, 9.05);
+
+        let panel2 = ArrayComponent::new_solar_panel(290, 32.1, 9.05);
+        let connection = ArrayConnection::connect(panel, panel2, ArrayConnectionType::Series);
+        assert_eq!(connection.total_voltage, 64.2);
+
+        println!("{}", connection.display());
+    }
+    #[test]
     fn spec_trait_test() {
         let panel = ArrayComponent::new_solar_panel(290, 32.1, 9.05);
         assert_eq!(panel.specs.len(), 3);
@@ -47,6 +64,14 @@ mod tests {
         }
         println!("\n");
     }
+    #[test]
+    fn battery_bank_test() {
+        let bat_bank = ArrayComponent::new_battery_bank(String::from("Lifeline AGM"), 12.0, 350);
+        assert_eq!(bat_bank.specs.len(), 2);
+
+        println!("\n{}\n", BatteryBank::display(&bat_bank));
+    }
+
     #[test]
     fn item_array_test() {
         let mut solar_array = PanelInventory::new();

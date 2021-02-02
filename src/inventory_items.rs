@@ -9,13 +9,16 @@ pub mod inventory_types {
         Watts,
     }
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, PartialEq, Copy, Clone)]
     pub enum ValueType {
         Int(i32),
         Float(f32),
     }
     pub trait Display {
         fn display(&self) -> String;
+        fn display_specs(&self) -> String {
+            String::from("")
+        }
     }
 
     #[derive(Debug)]
@@ -44,11 +47,103 @@ pub mod inventory_types {
             String::from(format!("{} {:?} - {}", v, self.unit, self.name))
         }
     }
+    pub trait Inventory {
+        fn get_items() -> Vec<ArrayComponent>;
+    }
 
     pub struct PanelInventory {
         pub items: Vec<(ArrayComponent, i32)>,
     }
 
+    #[allow(dead_code)]
+    pub struct ArrayConnection {
+        pub connection_type: ArrayConnectionType,
+        pub total_voltage: f32,
+        pub total_wattage: i32,
+        pub max_amperage: f32,
+        pub items: Vec<ArrayComponent>,
+    }
+
+    #[allow(dead_code)]
+    impl ArrayConnection {
+        pub fn connect(
+            from: ArrayComponent,
+            to: ArrayComponent,
+            connection_type: ArrayConnectionType,
+        ) -> ArrayConnection {
+            let mut a = ArrayConnection {
+                connection_type: connection_type,
+                total_voltage: 0.0,
+                total_wattage: 0,
+                max_amperage: 0.0,
+                items: vec![],
+            };
+
+            a.items.push(from);
+            a.items.push(to);
+            a.update_totals();
+            a
+        }
+        fn update_totals(&mut self) {
+            for item in self.items.iter() {
+                // voltage
+                let voltage_value =
+                    item.get_spec_value(String::from("Opt Operating Voltage (Vmp)"));
+                let voltage = match voltage_value {
+                    ValueType::Float(v) => v,
+                    _ => 0.0,
+                };
+                let v: f32 = match self.connection_type {
+                    ArrayConnectionType::Series => voltage,
+                    ArrayConnectionType::Parallel => 0.0,
+                    ArrayConnectionType::Direct => 0.0,
+                };
+                self.total_voltage += v;
+                // end voltage
+
+                // amperage
+                let amperage_value =
+                    item.get_spec_value(String::from("Opt Operating Current (Imp)"));
+                let amps = match amperage_value {
+                    ValueType::Float(a) => a,
+                    _ => 0.0,
+                };
+                let a: f32 = match self.connection_type {
+                    ArrayConnectionType::Series => 0.0,
+                    ArrayConnectionType::Parallel => amps,
+                    ArrayConnectionType::Direct => 0.0,
+                };
+                self.max_amperage += a;
+                // end amperage
+                // watts
+                let watts_value = item.get_spec_value(String::from("Nominal Max Power (Pmax)"));
+                let watts = match watts_value {
+                    ValueType::Int(a) => a,
+                    _ => 0,
+                };
+                self.total_wattage += watts;
+                //watts
+            }
+        }
+    }
+    impl Display for ArrayConnection {
+        fn display(&self) -> String {
+            let mut s = String::from(
+                format!(
+                    "Connecting the following items in {:?}:\n",
+                    self.connection_type
+                )
+                .as_str(),
+            );
+            for item in &self.items {
+                s.push_str(Display::display(item).as_str());
+            }
+            s.push_str(format!("Total Voltage: {}\n", self.total_voltage).as_str());
+            s.push_str(format!("Total Amperage: {}\n", self.max_amperage).as_str());
+            s.push_str(format!("Total Watts: {}\n", self.total_wattage).as_str());
+            s
+        }
+    }
     #[allow(dead_code)]
     impl PanelInventory {
         pub fn new() -> PanelInventory {
@@ -71,13 +166,16 @@ pub mod inventory_types {
         }
     }
 
-    #[allow(dead_code)]
     pub enum ArrayComponentType {
         SolarPanel,
-        SeriesConnection,
-        ParallelConnection,
-        DirectConnection,
         BatteryBank,
+    }
+    #[allow(dead_code)]
+    #[derive(Debug)]
+    pub enum ArrayConnectionType {
+        Series,
+        Parallel,
+        Direct,
     }
 
     pub trait SolarPanel {
@@ -85,7 +183,8 @@ pub mod inventory_types {
     }
 
     pub trait BatteryBank {
-        fn new_battery_bank(voltage: f32, total_amp_hours: i32) -> ArrayComponent;
+        fn new_battery_bank(name: String, voltage: f32, total_amp_hours: i32) -> ArrayComponent;
+        fn display(&self) -> String;
     }
 
     pub struct ArrayComponent {
@@ -94,11 +193,53 @@ pub mod inventory_types {
         pub component_type: ArrayComponentType,
     }
 
-    impl Display for ArrayComponent {
-        fn display(&self) -> String {
-            String::from(format!("{}", self.name))
+    impl ArrayComponent {
+        pub fn get_spec_value(&self, name: String) -> ValueType {
+            let mut iter = self.specs.iter();
+            let spec = iter.find(|&x| x.name == name);
+            match spec {
+                Some(v) => v.value,
+                None => ValueType::Int(0),
+            }
         }
     }
+
+    impl Display for ArrayComponent {
+        fn display(&self) -> String {
+            String::from(format!("{}\n", self.name))
+        }
+    }
+    #[allow(dead_code)]
+    impl BatteryBank for ArrayComponent {
+        fn new_battery_bank(name: String, voltage: f32, total_amp_hours: i32) -> ArrayComponent {
+            ArrayComponent {
+                name: name,
+                component_type: ArrayComponentType::BatteryBank,
+                specs: vec![
+                    Specification::new(
+                        String::from("Voltage"),
+                        ValueType::Float(voltage),
+                        Unit::Volts,
+                    ),
+                    Specification::new(
+                        String::from("Amp Hours"),
+                        ValueType::Int(total_amp_hours),
+                        Unit::Volts,
+                    ),
+                ],
+            }
+        }
+        fn display(&self) -> String {
+            let mut s = Display::display(self);
+            s.push_str(String::from("\n_______________\n").as_str());
+            for spec in &self.specs {
+                s.push_str(format!("{}\n", spec.display()).as_str());
+            }
+            //return display string
+            s
+        }
+    }
+
     #[allow(dead_code)]
     impl SolarPanel for ArrayComponent {
         fn new_solar_panel(pmax: i32, vmp: f32, imp: f32) -> ArrayComponent {
