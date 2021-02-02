@@ -44,12 +44,14 @@ mod tests {
 
     #[test]
     fn array_connection_parallel_test() {
-        let panel = ArrayComponent::new_solar_panel(290, 32.1, 9.05);
-        let panel2 = ArrayComponent::new_solar_panel(290, 32.1, 9.05);
-        let connection = ArrayConnection::connect(panel, panel2, ArrayConnectionType::Parallel);
-        assert_eq!(connection.total_voltage, 32.1);
-        assert_eq!(connection.max_amperage, 18.1);
-        assert_eq!(connection.total_wattage, 580);
+        let panel = ArrayComponent::new_solar_panel(445, 44.46, 10.48);
+        let panel2 = ArrayComponent::new_solar_panel(445, 44.46, 10.48);
+        let panel3 = ArrayComponent::new_solar_panel(445, 44.46, 10.48);
+        let mut connection = ArrayConnection::connect(panel, panel2, ArrayConnectionType::Parallel);
+        assert_eq!(connection.total_voltage, 44.46);
+        assert_eq!(connection.max_amperage, 20.96);
+        assert_eq!(connection.total_wattage, 890);
+        connection.add_component(panel3);
 
         println!("{}", connection.display());
     }

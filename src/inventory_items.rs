@@ -66,6 +66,10 @@ pub mod inventory_types {
 
     #[allow(dead_code)]
     impl ArrayConnection {
+        pub fn add_component(&mut self, to: ArrayComponent) {
+            self.items.push(to);
+            self.update_totals();
+        }
         pub fn connect(
             from: ArrayComponent,
             to: ArrayComponent,
@@ -86,6 +90,10 @@ pub mod inventory_types {
             a
         }
         fn update_totals(&mut self) {
+            //clear values
+            self.total_voltage = 0.0;
+            self.total_wattage = 0;
+            self.max_amperage = 0.0;
             for item in self.items.iter() {
                 // voltage
                 let voltage_value =
