@@ -71,6 +71,7 @@ pub mod inventory_types {
             to: ArrayComponent,
             connection_type: ArrayConnectionType,
         ) -> ArrayConnection {
+            //here we should do some error checking
             let mut a = ArrayConnection {
                 connection_type: connection_type,
                 total_voltage: 0.0,
@@ -93,12 +94,11 @@ pub mod inventory_types {
                     ValueType::Float(v) => v,
                     _ => 0.0,
                 };
-                let v: f32 = match self.connection_type {
-                    ArrayConnectionType::Series => voltage,
-                    ArrayConnectionType::Parallel => 0.0,
-                    ArrayConnectionType::Direct => 0.0,
+                match self.connection_type {
+                    ArrayConnectionType::Series => (self.total_voltage += voltage),
+                    ArrayConnectionType::Parallel => self.total_voltage = voltage,
+                    ArrayConnectionType::Direct => self.total_voltage += 0.0,
                 };
-                self.total_voltage += v;
                 // end voltage
 
                 // amperage
@@ -108,12 +108,11 @@ pub mod inventory_types {
                     ValueType::Float(a) => a,
                     _ => 0.0,
                 };
-                let a: f32 = match self.connection_type {
-                    ArrayConnectionType::Series => 0.0,
-                    ArrayConnectionType::Parallel => amps,
-                    ArrayConnectionType::Direct => 0.0,
+                match self.connection_type {
+                    ArrayConnectionType::Series => self.max_amperage = amps,
+                    ArrayConnectionType::Parallel => self.max_amperage += amps,
+                    ArrayConnectionType::Direct => self.max_amperage += 0.0,
                 };
-                self.max_amperage += a;
                 // end amperage
                 // watts
                 let watts_value = item.get_spec_value(String::from("Nominal Max Power (Pmax)"));
@@ -140,7 +139,7 @@ pub mod inventory_types {
             }
             s.push_str(format!("Total Voltage: {}\n", self.total_voltage).as_str());
             s.push_str(format!("Total Amperage: {}\n", self.max_amperage).as_str());
-            s.push_str(format!("Total Watts: {}\n", self.total_wattage).as_str());
+            s.push_str(format!("Total Wattage: {}\n", self.total_wattage).as_str());
             s
         }
     }
@@ -206,7 +205,14 @@ pub mod inventory_types {
 
     impl Display for ArrayComponent {
         fn display(&self) -> String {
-            String::from(format!("{}\n", self.name))
+            let watts = match self.specs[0].value {
+                ValueType::Int(a) => a,
+                _ => 0,
+            };
+            String::from(format!(
+                "{} - {} {:?}\n",
+                self.name, watts, self.specs[0].unit
+            ))
         }
     }
     #[allow(dead_code)]

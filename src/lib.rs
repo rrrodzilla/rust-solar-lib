@@ -43,15 +43,30 @@ mod tests {
     }
 
     #[test]
-    fn array_connection_test() {
+    fn array_connection_parallel_test() {
         let panel = ArrayComponent::new_solar_panel(290, 32.1, 9.05);
+        let panel2 = ArrayComponent::new_solar_panel(290, 32.1, 9.05);
+        let connection = ArrayConnection::connect(panel, panel2, ArrayConnectionType::Parallel);
+        assert_eq!(connection.total_voltage, 32.1);
+        assert_eq!(connection.max_amperage, 18.1);
+        assert_eq!(connection.total_wattage, 580);
 
+        println!("{}", connection.display());
+    }
+
+    #[test]
+    fn array_connection_series_test() {
+        let panel = ArrayComponent::new_solar_panel(290, 32.1, 9.05);
         let panel2 = ArrayComponent::new_solar_panel(290, 32.1, 9.05);
         let connection = ArrayConnection::connect(panel, panel2, ArrayConnectionType::Series);
+        assert_eq!(connection.max_amperage, 9.05);
+        assert_eq!(connection.total_wattage, 580);
+
         assert_eq!(connection.total_voltage, 64.2);
 
         println!("{}", connection.display());
     }
+
     #[test]
     fn spec_trait_test() {
         let panel = ArrayComponent::new_solar_panel(290, 32.1, 9.05);
